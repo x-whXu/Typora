@@ -1,4 +1,4 @@
-# git命令
+# Git bash命令
 
 ## 1. 本地git
 
@@ -35,7 +35,7 @@ git reflog
 
 ```
 # 添加远程仓库
-git remote add origin master
+git remote add origin <仓库ssh路径>
 # 推送本地仓库到远程仓库
 git push origin master
 ```
