@@ -1,0 +1,60 @@
+### Video Script
+
+Here, we want to introduce our paper MINING FALSE POSITIVE EXAMPLES FOR TEXT-BASED PERSON RE-IDENTIFICATION for the 2023 IEEE International Conference on Image Processing. We come from the South China University of Technology.
+
+------
+
+Now, let's first introduce the background of our paper. Text-based person re-identification (ReID) is aimed at identifying the targeted person images from a large-scale person image database according to a given textual description.
+
+The key task of text-based person ReID is to learn fine-grained cross-modal features between visual and textual modalities to discriminate between two very similar persons. Therefore, most methods focus on optimizing the global and local association between the intermediate features and linguistic features. The global association is applied to the whole image and the textual description, aiming to discriminate the matched image-text pairs from the mismatched ones. The local association aims to model the correspondences in the phrase-region pair or word-region pair.
+
+<img src="Video script.assets/image-20230827155636111.png" alt="image-20230827155636111" style="zoom:67%;" />
+
+
+------
+
+However, these methods generally ignore the false-positive matching problem. For example, as depicted in Fig. 1, the two people are difficult to distinguish based on the text query. The person on the left has the same identity as the text. Every adjective and noun in the text query can find its matched region in it. The person on the right has a different identity. The "red umbrella" of the text query has a low local similarity score because it has no matched region. Nevertheless, other matched word-region pairs might mask its role and gain a higher overall similarity score. However, there is a simple fact for image-text retrieval that a textual description does not describe things that are not present in the image, so a matched image-text pair should not have any mismatched word-region pairs. Therefore, it is essential to highlight the role of mismatched word-region pairs and greatly downgrade the overall similarity of image-text pairs containing mismatched word-region pairs in order to prevent false-positive matching.
+
+<img src="Video script.assets/image-20230827203119118.png" alt="image-20230827203119118" style="zoom: 50%;" />
+
+
+------
+
+To this end, we propose to mine false-positive examples (MFPE) via a jointly optimized multi-branch architecture for text-based person ReID. As illustrated in Fig. 2, MFPE contains three branches. The global and local branches are for aligning visual features and text features and calculating the similarity of image-text pairs. Besides, we delicately design a false-positive mining branch (FPM) to highlight the role of mismatched word-region pairs, effectively preventing false-positive matching.
+
+![image-20230827203217890](Video script.assets/image-20230827203217890.png)
+
+
+In the FPM branch, we first perform a max-pooling operation on the similarity score map to build word-region pairs, because if a word doesn't match the most probable matched region, it means that the word doesn't match any region.
+
+Furthermore, the major challenge of our method is how to train the model to determine whether the word-region pairs match in the absence of labels for word-region pairs. We utilize contrastive learning to make use of the supervision information in the labels for image-text pairs. Specifically, we further exploit the priori fact mentioned above as the coarse judgment principle. Because all word-region pairs of a matched image-text pair match, we regard all word-region pairs of a matched image-text pair as positive samples. On the contrary, because a mismatched image-text pair has at least one mismatched word-region pair, we regard the word-region pair with the lowest similarity score in a mismatched image-text pair as the negative sample. Besides, we adopt a balanced sample strategy to obtain the same number of matched and mismatched image-text pairs in a mini-batch.
+
+In order to train the decision boundary at the same time, we propose a novel cross-relu loss instead of directly using the commonly used contrastive learning loss. Specifically, the experimental analysis demonstrates that a learnable decision boundary is unnecessary, so zero is considered the decision boundary for matched and mismatched word-region pairs. For the positive samples, we adopt a relu with slope -1 and bias 0.001 to train their similarity scores to tend to be positive. Similarly, for the negative samples, we train them to be negative via a leaky relu with slope 1 and bias 0.15. Note that adopting leaky relu instead of relu and setting bias large enough is aimed at maximizing the mining of mismatched word-region pairs to highlight the effect of the FPM branch.
+
+During inference, we employ the mining mask operation to filter out all mismatched word-region pairs according to the decision boundary. And add their negative similarity scores to the overall similarity to greatly downgrade the overall similarity, preventing false-positive matching.
+
+------
+
+Here, we want to introduce our experiment setting and the dataset. We conducted extensive experiments on the CUHK-PEDES dataset. Following the official evaluation protocol, the training set contains 34,054 images and 68,126 textual descriptions for 11003 persons. The validation and test sets include data for 1,000 persons, respectively. Each image contains at least two textual descriptions, each of which is made up of 23.5 words on average. We adopt the popular Rank-k metrics (k = 1, 5, and 10) as the evaluation metrics. Rank-k reveals the probability that, when given a textual description as a query, we can find at least one matching person image in the top-k candidate list.
+
+------
+
+Next, we talk about our ablation study about branches on CUHK-PEDES dataset in Table 2. It is obvious that the local similarity modified by negative similarity achieves a significant improvement of 1.40% on R@1 compared with the unmodified. The ‘global + local + FPM’ also promotes the R@1 accuracy of the ‘global + local’ by 2.70%. The above improvement strongly demonstrates the effectiveness of our proposed framework for mining false-positive examples.
+
+Moreover, we conducted a series of ablation studies to analyze the effectiveness of each component of the FPM branch in Table 3. The baseline model refers to MFPE without the FPM branch and BERT in the training stage. When removing the ranking loss on local-negative similarity, robustness and performance are severely degraded since the modified local similarity lacks a direct constraint. Mining mask is a key component in the FPM branch to emphasize the effect of mismatched pairs, without which the performance drops by 1.34%. Without balanced sampling, performance is slightly decreased due to the apparent propensity for mismatched data. And the cost of time increases by about four times. Adding a learnable decision boundary to MFPE will obtain suboptimal performance. However, the boundary is always kept around the initial value of zero. Consequently, the learnable decision boundary is unnecessary.
+
+![image-20230829112001959](Video script.assets/image-20230829112001959.png)
+
+------
+
+In Table 1, we compare our proposed MFPE method with previous approaches on the CUHK-PEDES database. Comparison results show MFPE outperforms all other methods. For example, compared with the typical region-based model MIA, MFPE obtains a significant 10.72% improvement on R@1. Moreover, compared with SSAN, MFPE still achieves a nearly 2.45% improvement in terms of R@1.
+
+<img src="Video script.assets/image-20230829112055754.png" alt="image-20230829112055754" style="zoom:67%;" />
+
+------
+
+Here, we visualize the word-region negative similarity according to a given text query in Fig. 3. For the matched image, almost all words obtain non-negative similarity. As for the mismatched image, obviously mismatched words like "Man" and "short" obtain a corresponding negative similarity. This case demonstrates the effectiveness of the FPM branch for mining mismatched pairs.
+
+<img src="Video script.assets/image-20230829154023422.png" alt="image-20230829154023422" style="zoom: 50%;" />
+
+In this paper, we propose to mine false-positive examples via a jointly optimized multi-branch architecture for text-based person ReID. We delicately design a cross-relu loss to increase the gap in similarity scores between matched and mismatched word-region pairs. Besides, MFPE contains an FPM branch to highlight the role of mismatched word-region pairs in order to prevent false-positive matching. Finally, we conducted extensive experiments to demonstrate the effectiveness of MFPE. Thank you for listening!
